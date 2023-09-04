@@ -319,30 +319,40 @@ func TestCurlIstioGateway(t *testing.T) {
 	}
 }
 
+func has_ttl_expire(t *testing.T, name string) string {
+	// Nokia doesn't support /acl OpenConfig it seems
+	get_ttl_counts_cmd := fmt.Sprintf("info from state acl ipv4-filter %v", ttl_acl)
+
+	stdout, _, err := exec_wrapper(name, get_ttl_counts_cmd, RouterCLI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(stdout, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "subinterface ") {
+			iface := strings.Split(strings.TrimSpace(line), " ")[1]
+			count, err := strconv.Atoi(strings.Split(strings.TrimSpace(lines[i+1]), " ")[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if count > 0 {
+				return iface
+			}
+		}
+	}
+	return ""
+}
+
 // Get all ifaces with nonzero TTL expire counts
 // Also output non-bad routers, for completeness
 func getAllBits(t *testing.T) []Router {
 	all_routers := []Router{}
-	// Nokia doesn't support /acl OpenConfig it seems
-	get_ttl_counts_cmd := fmt.Sprintf("info from state acl ipv4-filter %v", ttl_acl)
 	for _, dut := range ondatra.DUTs(t) {
 		router := Router{Name: dut.Name()}
-		stdout, _, err := exec_wrapper(dut.Name(), get_ttl_counts_cmd, RouterCLI)
-		if err != nil {
-			t.Fatal(err)
-		}
-		lines := strings.Split(stdout, "\n")
-		for i, line := range lines {
-			if strings.Contains(line, "subinterface ") {
-				iface := strings.Split(strings.TrimSpace(line), " ")[1]
-				count, err := strconv.Atoi(strings.Split(strings.TrimSpace(lines[i+1]), " ")[1])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if count > 0 {
-					router.BadIfaces = append(router.BadIfaces, iface)
-				}
-			}
+		// TODO more conditions
+		iface := has_ttl_expire(t, dut.Name())
+		if iface != "" {
+			router.BadIfaces = append(router.BadIfaces, iface)
 		}
 		all_routers = append(all_routers, router)
 	}
