@@ -303,7 +303,7 @@ func TestCurlIstioGateway(t *testing.T) {
 			stdout, stderr, err := curlIstioGateway(t, request_id, dut)
 			curl_success := strings.Contains(stdout, "<html>") && !strings.Contains(stdout, "details are currently unavailable")
 			if !curl_success {
-				t.Logf("Curl Istio gateway from %v failed\n\nStdout: %v\nStderr: %v\nErr: %v\n", dut.Name(), stdout[:20], stderr, err)
+				t.Logf("Curl Istio gateway from %v failed\n\nStdout: %v\nStderr: %v\nErr: %v\n", dut.Name(), stdout, stderr, err)
 				failed_requests = append(failed_requests, struct {
 					string
 					*ondatra.DUTDevice
