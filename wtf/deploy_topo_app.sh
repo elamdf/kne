@@ -8,6 +8,7 @@
 # Run WTF tests if specified
 
 set -e
+./deploy_cluster # this seems necessary to reproduce
 
 pushd ../..
 export WTF_KNE_WORKDIR=wtf
