@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	//"errors"
+	//"time"
 	"log"
 	"net"
 	"net/netip"
@@ -106,6 +108,8 @@ func exec_wrapper(topo_name string, command string, location ExecLocation) (stri
 	}
 	if location == RouterShell || location == RouterCLI {
 		full_command = fmt.Sprintf("kubectl -n %v exec -it %v -- %v", namespace, topo_name, command)
+		fmt.Printf("full exec_wrapper command is %s\n", full_command)
+		
 	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -282,11 +286,31 @@ func TestLoop(t *testing.T) {
 	traceRequest(t, src_dut, loop_request_id, paths)
 }
 
+// TODO parameterized timeout
 func curlIstioGateway(t *testing.T, request_id string, dut *ondatra.DUTDevice) (string, string, error) {
-	src_addr := sourceAddr(t, dut, gateway_ip)
-	// Note src addr needed even if directly attached to host
-	full_curl_cmd := fmt.Sprintf(curl_cmd, network_instance, src_addr, gateway_url, request_id)
-	return exec_wrapper(dut.Name(), full_curl_cmd, RouterShell)
+	//timeout := time.After(60 * time.Second)
+    //done := make(chan bool, 1)
+	var stdout, stderr string
+	var err error
+
+    //go func() {
+		src_addr := sourceAddr(t, dut, gateway_ip)
+		// Note src addr needed even if directly attached to host
+		full_curl_cmd := fmt.Sprintf(curl_cmd, network_instance, src_addr, gateway_url, request_id)
+		stdout, stderr, err = exec_wrapper(dut.Name(), full_curl_cmd, RouterShell)
+        //done <- true
+    //}()
+
+		return stdout, stderr, err;
+		/*
+    select {
+    case <-timeout:
+	return "", "", errors.New("timeout");
+    case <-done:
+		return stdout, stderr, err;
+	}
+	*/
+
 }
 
 // For each dut, fetch the productpage a bunch of times.
@@ -297,6 +321,8 @@ func TestCurlIstioGateway(t *testing.T) {
 		string
 		*ondatra.DUTDevice
 	}
+
+
 	for _, dut := range ondatra.DUTs(t) {
 		for i := 0; i < 3; i++ {
 			request_id := fmt.Sprintf("test-request-%v-%v", dut.Name(), i)
@@ -536,6 +562,7 @@ func getPath(t *testing.T, src_dut *ondatra.DUTDevice, dest_ip string) []OnPathR
 func traceRequest(t *testing.T, src_dut *ondatra.DUTDevice, request_id string, paths [][]OnPathRouter) {
 	// Send a trace request. This doesn't affect scoping in the network (hence don't care about output),
 	// but it's more realistic to send from the router.
+	t.Log("tracing request " + request_id);
 	curlIstioGateway(t, "WTFTRACE-"+request_id, src_dut)
 	var out RequestOutput
 	out.TracedIP = gateway_ip

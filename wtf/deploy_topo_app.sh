@@ -8,7 +8,7 @@
 # Run WTF tests if specified
 
 set -e
-./deploy_cluster # this seems necessary to reproduce
+./deploy_cluster.sh # this seems necessary to reproduce
 
 pushd ../..
 export WTF_KNE_WORKDIR=wtf
@@ -48,14 +48,17 @@ kne create out/$WTF_TOPOFILE
 
 # Create microservice app
 kubectl apply -f ../../$ISTIODIR/samples/bookinfo/platform/kube/bookinfo.yaml
-kubectl scale deployment productpage-v1 --replicas=24
-kubectl scale deployment details-v1 --replicas=24
-kubectl scale deployment ratings-v1 --replicas=5
-kubectl scale deployment reviews-v1 --replicas=5
-kubectl scale deployment reviews-v2 --replicas=5
-kubectl scale deployment reviews-v3 --replicas=5
+if false; then 
+    kubectl scale deployment productpage-v1 --replicas=24
+    kubectl scale deployment details-v1 --replicas=24
+    kubectl scale deployment ratings-v1 --replicas=5
+    kubectl scale deployment reviews-v1 --replicas=5
+    kubectl scale deployment reviews-v2 --replicas=5
+    kubectl scale deployment reviews-v3 --replicas=5
+fi
 
-while [ $(kubectl get pods --field-selector status.phase!=Running | wc -l) != 0 ]; do 
+
+while [ $(kubectl get pods -A --field-selector status.phase!=Running | wc -l) != 0 ]; do 
 sleep 1
 done
 
@@ -76,9 +79,9 @@ if [ "$1" = "run-tests" ]; then
     # Note -config option is deprecated
     # *.go compiles stuff from non-test file into test file
     go test -v *.go -topology out/$WTF_TOPOFILE -testbed out/$WTF_TESTBEDFILE -vendor_creds=NOKIA/admin/NokiaSrl1! -skip_reset=true
-    pushd out
+    pushd outuu
     ../kne_plot_trace.py --input-file $WTF_TESTOUTFILE
-    ../../../proxy/src/envoy/http/alpn/istio_plot_trace.py --input-file $WTF_TESTOUTFILE
+    ../istio_plot_trace.py --input-file $WTF_TESTOUTFILE
     popd
 
 fi
