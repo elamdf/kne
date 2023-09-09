@@ -48,7 +48,7 @@ kne create out/$WTF_TOPOFILE
 
 # Create microservice app
 kubectl apply -f ../../$ISTIODIR/samples/bookinfo/platform/kube/bookinfo.yaml
-if false; then 
+if true; then 
     kubectl scale deployment productpage-v1 --replicas=24
     kubectl scale deployment details-v1 --replicas=24
     kubectl scale deployment ratings-v1 --replicas=5
@@ -58,8 +58,12 @@ if false; then
 fi
 
 
-while [ $(kubectl get pods -A --field-selector status.phase!=Running | wc -l) != 0 ]; do 
-sleep 1
+
+while [ $(kubectl get pods -A --field-selector=status.phase!=Running | wc -l) -gt 0 ] \
+ || [ $(kubectl get pods -A -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[*].ready}{"\n"}{end}' | grep false | wc -l) -gt 0 ] \
+ || [ $(kubectl get srlinux -A | grep "loaded" | wc -l) -ne 3 ]; # TODO don't hardcode that we have 3 srl*
+do
+    sleep 1
 done
 
 # TODO change arbitrary sleeps to waiting for the right condition (these are not always long enough)
